@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex,nofollow">
+<title>Mom's Vitals Log</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&display=swap">
+<style>
+/* Layout: one narrow column read top to bottom: alert, the one next thing to do, today's three checks, the entry form, weight trend, history. */
+:root {
+  --bg: #EDF2F3; --surface: #FFFFFF; --ink: #12292E; --muted: #55707A; --line: #D2DEE1;
+  --accent: #0F6E7C; --on-accent: #FFFFFF;
+  --ok: #1B7447; --ok-soft: #DDF1E6;
+  --warn: #8A5700; --warn-soft: #FBEBC8;
+  --bad: #B3261E; --bad-soft: #FBE0DD; --on-bad: #FFFFFF;
+  --display: "Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #0D191C; --surface: #15252A; --ink: #E5EFF1; --muted: #93ABB1; --line: #283B41;
+  --accent: #5CC4D2; --on-accent: #06262B;
+  --ok: #6AD09B; --ok-soft: #173527;
+  --warn: #EDB955; --warn-soft: #3A2D0F;
+  --bad: #FF8F85; --bad-soft: #43201D; --on-bad: #2A0A07;
+  color-scheme: dark } }
+
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.45;
+  padding-top: calc(20px + env(safe-area-inset-top, 0px)); padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px }
+h1, h2, .big { font-family: var(--display); text-wrap: balance; margin: 0 }
+h1 { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.01em }
+h2 { font-size: 1.15rem; font-weight: 700 }
+p { margin: 0 }
+.muted { color: var(--muted) }
+.small { font-size: 0.88rem }
+.num { font-variant-numeric: tabular-nums }
+header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0 }
+.alert { border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px }
+.alert.bad { background: var(--bad); color: var(--on-bad) }
+.alert.bad .big { font-size: 1.45rem; font-weight: 700 }
+.alert.warn { background: var(--warn-soft); color: var(--ink); border: 1px solid var(--warn) }
+.alert .phone { font-size: 1.2rem; font-weight: 700; user-select: all }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap }
+
+.next { background: var(--accent); color: var(--on-accent); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 8px }
+.next .eyebrow { font-size: 0.78rem; letter-spacing: 0.09em; text-transform: uppercase; font-weight: 700; opacity: 0.85 }
+.next .big { font-size: 1.6rem; font-weight: 700; line-height: 1.15 }
+.next button { align-self: flex-start; margin-top: 6px; background: var(--on-accent); color: var(--accent); border-color: transparent }
+
+button { font: inherit; font-weight: 700; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); padding: 10px 16px; cursor: pointer; min-height: 44px }
+button.primary { background: var(--accent); color: var(--on-accent); border-color: transparent }
+button.quiet { min-height: 36px; padding: 4px 10px; font-weight: 400; font-size: 0.88rem; color: var(--muted) }
+button.danger { color: var(--bad); border-color: var(--bad) }
+button:disabled { opacity: 0.5; cursor: default }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px }
+.next :focus-visible, .alert.bad :focus-visible { outline-color: currentColor }
+
+.slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px }
+.slot { border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 4px; min-width: 0 }
+.slot.due { border-color: var(--accent); border-width: 2px; padding: 11px }
+.slot .name { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; color: var(--muted) }
+.slot .bp { font-family: var(--display); font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1 }
+.slot .bp.empty { color: var(--muted); font-size: 1.05rem; font-family: var(--body) }
+
+.chip { display: inline-block; font-size: 0.8rem; font-weight: 700; padding: 2px 9px; border-radius: 999px; white-space: nowrap }
+.chip.ok { background: var(--ok-soft); color: var(--ok) }
+.chip.warn { background: var(--warn-soft); color: var(--warn) }
+.chip.bad { background: var(--bad-soft); color: var(--bad) }
+.chip.plain { background: var(--bg); color: var(--muted) }
+
+form { display: flex; flex-direction: column; gap: 14px }
+.fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px }
+.fields.two { grid-template-columns: 1fr 1fr }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 0.88rem; font-weight: 700; min-width: 0 }
+label span.opt { font-weight: 400; color: var(--muted) }
+input, select { font: inherit; font-size: 1.15rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; width: 100%; min-width: 0; min-height: 48px; font-variant-numeric: tabular-nums }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink) }
+.verdict { border-radius: 10px; padding: 12px 14px; font-weight: 700 }
+.verdict.ok { background: var(--ok-soft); color: var(--ok) }
+.verdict.warn { background: var(--warn-soft); color: var(--warn) }
+.verdict.bad { background: var(--bad-soft); color: var(--bad) }
+.verdict.plain { background: var(--bg); color: var(--muted); font-weight: 400 }
+.verdict .sub { font-weight: 400; color: var(--ink); display: block; margin-top: 2px }
+
+.wstat { display: flex; gap: 24px; flex-wrap: wrap; align-items: baseline }
+.wstat .big { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums }
+svg.chart { width: 100%; height: auto; display: block }
+.chart .grid { stroke: var(--line); stroke-width: 1; fill: none }
+.chart .line { stroke: var(--accent); stroke-width: 2.5; fill: none; stroke-linejoin: round; stroke-linecap: round }
+.chart .dot { fill: var(--accent) }
+.chart .dot.last { stroke: var(--surface); stroke-width: 3 }
+.chart .limit { stroke: var(--bad); stroke-width: 1.5; stroke-dasharray: 5 5; fill: none }
+.chart text { fill: var(--muted); font-size: 12px; font-family: var(--body); font-variant-numeric: tabular-nums }
+.chart text.lim { fill: var(--bad); font-weight: 700 }
+
+.day { display: flex; flex-direction: column; gap: 2px }
+.day h3 { font-size: 0.82rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 8px 0 4px; font-family: var(--body) }
+.entry { display: grid; grid-template-columns: 5.2em 5.4em 1fr auto; gap: 4px 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line) }
+.entry .bp { font-family: var(--display); font-weight: 700; font-size: 1.15rem; font-variant-numeric: tabular-nums }
+.entry .meta { display: flex; gap: 6px 10px; flex-wrap: wrap; align-items: center; min-width: 0 }
+.entry .note { grid-column: 1 / -1; color: var(--muted); font-size: 0.9rem; overflow-wrap: anywhere }
+details summary { cursor: pointer; font-weight: 700 }
+details[open] summary { margin-bottom: 12px }
+.link-box { font-size: 0.95rem; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; overflow-wrap: anywhere; user-select: all }
+.stack { display: flex; flex-direction: column; gap: 12px }
+.qr-card { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; background: #FFFFFF; color: #12292E; border: 1px solid var(--line); border-radius: 12px; padding: 18px }
+.qr-card .big { font-size: 1.3rem; font-weight: 700 }
+.qr-card svg { width: 240px; max-width: 100%; height: auto; display: block }
+@media print {
+  body { background: #FFFFFF; padding: 0 }
+  body * { visibility: hidden }
+  #qr-card, #qr-card * { visibility: visible }
+  #qr-card { position: fixed; top: 12mm; left: 0; right: 0; margin: 0 auto; width: 120mm; border: 1px solid #12292E }
+  #qr-card svg { width: 90mm }
+}
+
+@media (max-width: 520px) {
+  .slots { grid-template-columns: 1fr }
+  .fields { grid-template-columns: 1fr 1fr }
+  .entry { grid-template-columns: 5em 1fr auto }
+  .entry .meta { grid-column: 1 / -1 }
+  .entry .del { grid-row: 1; grid-column: 3 }
+  .fields.two { grid-template-columns: 1fr }
+  .chart text { font-size: 19px }
+}
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Mom's Vitals Log</h1>
+    <p class="muted num" id="today-date"></p>
+  </header>
+
+  <!-- Shown only when the page is opened without a family link -->
+  <section class="panel" id="setup" hidden>
+    <h2>Open the family link</h2>
+    <p id="setup-msg">This page needs the private family link to show the log. Open the link a family member sent you.</p>
+    <p class="small muted">Setting this up for the first time? Start a new log here, then share the link it gives you with the family.</p>
+    <div class="row"><button type="button" class="primary" id="setup-new">Start a new family log</button></div>
+  </section>
+
+  <div class="wrap" id="app" hidden>
+  <p class="verdict plain" id="status" hidden></p>
+  <div id="alert" hidden></div>
+
+  <section class="next" id="next" aria-live="polite">
+    <span class="eyebrow">Do this now</span>
+    <p class="big" id="next-title">Loading the log…</p>
+    <p id="next-sub"></p>
+    <button type="button" id="next-btn" hidden></button>
+  </section>
+
+  <section class="panel">
+    <h2>Today's checks</h2>
+    <div class="slots" id="slots"></div>
+    <p class="small muted">BP medicine is morning and night. If the top number is under 100, skip that dose. The afternoon check is for monitoring only.</p>
+  </section>
+
+  <section class="panel" id="log">
+    <h2>Log a check</h2>
+    <form id="form" novalidate>
+      <div class="seg" role="group" aria-label="Time of day">
+        <button type="button" data-slot="morning" id="seg-morning">Morning</button>
+        <button type="button" data-slot="afternoon" id="seg-afternoon">Afternoon</button>
+        <button type="button" data-slot="night" id="seg-night">Night</button>
+      </div>
+      <div class="fields">
+        <label for="sys">Top number
+          <input id="sys" inputmode="numeric" autocomplete="off" placeholder="120"></label>
+        <label for="dia">Bottom number
+          <input id="dia" inputmode="numeric" autocomplete="off" placeholder="80"></label>
+        <label for="weight">Weight (lb)
+          <input id="weight" inputmode="decimal" autocomplete="off" placeholder="0.0"></label>
+      </div>
+      <p class="verdict plain" id="live">Enter the top number to see whether to give the dose.</p>
+      <p class="verdict warn" id="live-weight" hidden></p>
+      <div class="fields two">
+        <label for="when">Measured at
+          <input id="when" type="datetime-local"></label>
+        <label for="pulse">Pulse <span class="opt">optional</span>
+          <input id="pulse" inputmode="numeric" autocomplete="off"></label>
+      </div>
+      <label for="note">Note <span class="opt">optional, e.g. dizzy, swollen ankles</span>
+        <input id="note" autocomplete="off" maxlength="200"></label>
+      <p class="verdict bad" id="form-error" hidden></p>
+      <button type="submit" class="primary" id="save">Save check</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>Weight</h2>
+    <div id="weight-body"><p class="muted">Her weight trend shows here once a weight is logged. A gain of 5 lb or more within 7 days raises a call-the-doctor alert.</p></div>
+  </section>
+
+  <section class="panel">
+    <h2>History</h2>
+    <div id="history"><p class="muted">Every check you save is listed here by day, with the time, BP, weight and whether the dose was given or skipped.</p></div>
+  </section>
+
+  <section class="panel">
+    <details>
+      <summary>Doctor's contact</summary>
+      <form id="doc-form">
+        <div class="fields two">
+          <label for="doc-name">Name <input id="doc-name" autocomplete="off" maxlength="80"></label>
+          <label for="doc-phone">Phone <input id="doc-phone" inputmode="tel" autocomplete="off" maxlength="40"></label>
+        </div>
+        <div class="row"><button type="submit">Save contact</button><span class="small muted" id="doc-saved"></span></div>
+        <p class="small muted">Shown in the weight alert so the number is right there when you need it.</p>
+      </form>
+    </details>
+  </section>
+
+  <section class="panel">
+    <details>
+      <summary>Family link</summary>
+      <div class="stack">
+        <p>Anyone with this link can see and add to the log. Send it only to family, and don't post it anywhere public.</p>
+        <p class="link-box" id="family-link"></p>
+        <div class="row"><button type="button" id="copy-link">Copy link</button><span class="small muted" id="copy-done"></span></div>
+        <p class="verdict warn" id="qr-warn" hidden></p>
+        <div class="qr-card" id="qr-card" hidden>
+          <p class="big">Mom's Vitals Log</p>
+          <div id="qr"></div>
+          <p>Scan with a phone camera to log a check.</p>
+        </div>
+        <div class="row"><button type="button" class="primary" id="print-qr" hidden>Print QR code</button></div>
+        <p class="small muted">This device remembers the link, so the page still opens the log if you bookmark it without the code.</p>
+      </div>
+    </details>
+  </section>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+(function () {
+  var firebaseConfig = {
+    apiKey: "AIzaSyApxUift6WoyEHdBINWoQ60h47KJDDeXDY",
+    authDomain: "moms-vitals.firebaseapp.com",
+    projectId: "moms-vitals",
+    storageBucket: "moms-vitals.firebasestorage.app",
+    messagingSenderId: "77620632702",
+    appId: "1:77620632702:web:a3ab315f89ef4db81ccc2f"
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var DAY = 86400000, WEEK = 7 * DAY;
+  var GAIN_ALERT = 5, GAIN_WATCH = 3, SYS_SKIP = 100;
+  var SLOTS = {
+    morning: { label: 'Morning', order: 0, med: true },
+    afternoon: { label: 'Afternoon', order: 1, med: false },
+    night: { label: 'Night', order: 2, med: true }
+  };
+  var db = null, readings = [], contact = {}, loaded = false;
+  var slot = slotFor(new Date()), slotTouched = false, whenTouched = false, pendingDelete = null;
+
+  /* ---------- family code ---------- */
+  /* The log lives at /logs/<code>/ in Firestore. The rules only allow codes of 24+ characters, and codes can't be listed. */
+  var KEY_RE = /^[A-Za-z0-9_-]{24,64}$/, STORE = 'vitals-family-code';
+  function newKey() {
+    var abc = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789', a = new Uint8Array(32), out = '';
+    crypto.getRandomValues(a);
+    for (var i = 0; i < a.length; i++) out += abc[a[i] % abc.length];
+    return out;
+  }
+  function findKey() {
+    var h = location.hash.replace(/^#/, '');
+    if (KEY_RE.test(h)) return { key: h };
+    var saved = null;
+    try { saved = localStorage.getItem(STORE); } catch (e) {}
+    if (!h && saved && KEY_RE.test(saved)) return { key: saved };
+    return { key: null, broken: !!h };
+  }
+
+  function slotFor(d) { var h = d.getHours(); return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'night'; }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function localInput(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+  function dayKey(ts) { var d = new Date(ts); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function fmtTime(ts) { return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); }
+  function fmtDay(ts) { return new Date(ts).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' }); }
+  function fmtShort(ts) { return new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric' }); }
+  function lb(n) { return (Math.round(n * 10) / 10).toFixed(1); }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function copyText(text, btn, done) {
+    var ok = function () { btn.textContent = done; }, no = function () { btn.textContent = 'Select the text to copy'; };
+    try { navigator.clipboard.writeText(text).then(ok, no); } catch (e) { no(); }
+  }
+
+  /* Weight rule: compare a weight against the lowest weight logged in the 7 days before it. */
+  function gainAt(ts, w, skipId) {
+    var base = null;
+    readings.forEach(function (r) {
+      if (r.id === skipId || typeof r.weight !== 'number') return;
+      if (r.ts < ts && r.ts >= ts - WEEK && (base === null || r.weight < base.weight)) base = r;
+    });
+    if (!base) return null;
+    var gain = w - base.weight;
+    return { base: base, gain: gain, level: gain >= GAIN_ALERT ? 'bad' : gain >= GAIN_WATCH ? 'warn' : 'ok' };
+  }
+  function latestWeight() {
+    for (var i = 0; i < readings.length; i++) if (typeof readings[i].weight === 'number') return readings[i];
+    return null;
+  }
+  function doseVerdict(s, sys) {
+    if (!SLOTS[s].med) {
+      return sys < SYS_SKIP
+        ? { cls: 'warn', text: 'Low reading: top number is ' + sys + '.', sub: 'No medicine is due this afternoon. Check again tonight before the night dose.' }
+        : { cls: 'plain', text: 'Monitoring check. No medicine is due this afternoon.' };
+    }
+    var name = SLOTS[s].label.toLowerCase();
+    return sys < SYS_SKIP
+      ? { cls: 'bad', text: 'SKIP the ' + name + ' BP medicine.', sub: 'Top number is ' + sys + ', which is under 100.' }
+      : { cls: 'ok', text: 'OK to give the ' + name + ' BP medicine.', sub: 'Top number is ' + sys + ', which is 100 or higher.' };
+  }
+  function setVerdict(node, v) {
+    node.className = 'verdict ' + v.cls; node.textContent = v.text;
+    if (v.sub) node.appendChild(el('span', 'sub', v.sub));
+    if (v.extra) node.appendChild(el('span', 'sub', v.extra));
+  }
+
+  /* ---------- render ---------- */
+  function todays() { var k = dayKey(Date.now()); return readings.filter(function (r) { return dayKey(r.ts) === k; }); }
+
+  function renderAlert() {
+    var box = $('alert'); box.textContent = '';
+    var lw = latestWeight(), g = lw && gainAt(lw.ts, lw.weight, lw.id);
+    if (!g || g.level === 'ok') { box.hidden = true; return; }
+    box.hidden = false;
+    var since = 'Up ' + lb(g.gain) + ' lb in the past week: ' + lb(g.base.weight) + ' lb on ' + fmtShort(g.base.ts) + ', ' + lb(lw.weight) + ' lb on ' + fmtShort(lw.ts) + '.';
+    if (g.level === 'bad') {
+      box.className = 'alert bad';
+      box.appendChild(el('p', 'big', 'Call the doctor about her weight'));
+      box.appendChild(el('p', null, since + ' A gain of 5 lb or more in a week needs the doctor to know today.'));
+      if (contact.phone || contact.name) {
+        var row = el('div', 'row');
+        if (contact.name) row.appendChild(el('span', null, contact.name));
+        if (contact.phone) {
+          row.appendChild(el('span', 'phone num', contact.phone));
+          var b = el('button', null, 'Copy number'); b.type = 'button';
+          b.onclick = function () { copyText(contact.phone, b, 'Copied'); };
+          row.appendChild(b);
+        }
+        box.appendChild(row);
+      } else {
+        box.appendChild(el('p', 'small', 'Add the doctor’s number under Doctor’s contact at the bottom so it shows here.'));
+      }
+      box.appendChild(el('p', 'small', 'If she has trouble breathing, chest pain, or faints, call 911.'));
+    } else {
+      box.className = 'alert warn';
+      box.appendChild(el('h2', null, 'Watch her weight'));
+      box.appendChild(el('p', null, since + ' Not at the 5 lb alert yet. Weigh her again at the next check.'));
+    }
+  }
+
+  function renderNext() {
+    var t = $('next-title'), s = $('next-sub'), b = $('next-btn');
+    b.hidden = true; b.onclick = null;
+    if (!loaded) { return; }
+    var now = new Date(), cur = slotFor(now), list = todays();
+    var pending = list.filter(function (r) { return r.med === 'pending'; })[0];
+    var haveCur = list.some(function (r) { return r.slot === cur; });
+    if (pending) {
+      t.textContent = 'Give her the ' + SLOTS[pending.slot].label.toLowerCase() + ' BP medicine';
+      s.textContent = 'BP was ' + pending.sys + '/' + pending.dia + ' at ' + fmtTime(pending.ts) + '. Top number is 100 or higher, so the dose is OK.';
+      b.hidden = false; b.textContent = 'Mark dose as given';
+      b.onclick = function () { markGiven(pending.id, b); };
+    } else if (!haveCur) {
+      t.textContent = SLOTS[cur].label + ' check is due';
+      s.textContent = SLOTS[cur].med
+        ? 'Take her BP and weight before the ' + cur + ' medicine.'
+        : 'Take her BP and weight. This one is for monitoring only, no medicine.';
+      b.hidden = false; b.textContent = 'Log it now';
+      b.onclick = function () { $('log').scrollIntoView(); $('sys').focus({ preventScroll: true }); };
+    } else {
+      t.textContent = 'All caught up for now';
+      s.textContent = cur === 'morning' ? 'Next check: this afternoon, after 12:00.'
+        : cur === 'afternoon' ? 'Next check: tonight after 5:00 PM, before her night medicine.'
+        : 'Next check: tomorrow morning, before her morning medicine.';
+    }
+  }
+
+  function medChip(r) {
+    if (r.med === 'taken') return el('span', 'chip ok', 'Dose given');
+    if (r.med === 'skipped') return el('span', 'chip bad', 'Dose skipped');
+    if (r.med === 'pending') return el('span', 'chip warn', 'Dose not marked');
+    return el('span', 'chip plain', 'Monitoring');
+  }
+
+  function renderToday() {
+    var box = $('slots'); box.textContent = '';
+    var cur = slotFor(new Date()), list = todays();
+    Object.keys(SLOTS).forEach(function (k) {
+      var r = list.filter(function (x) { return x.slot === k; })[0];
+      var card = el('div', 'slot' + (!r && k === cur && loaded ? ' due' : ''));
+      card.appendChild(el('span', 'name', SLOTS[k].label));
+      if (r) {
+        card.appendChild(el('span', 'bp', r.sys + '/' + r.dia));
+        card.appendChild(el('span', 'small muted num', fmtTime(r.ts) + (typeof r.weight === 'number' ? ' · ' + lb(r.weight) + ' lb' : ' · no weight')));
+        var c = el('div'); c.appendChild(medChip(r)); card.appendChild(c);
+      } else {
+        var o = SLOTS[k].order, co = SLOTS[cur].order;
+        card.appendChild(el('span', 'bp empty', !loaded ? '—' : k === cur ? 'Due now' : o < co ? 'Not logged' : 'Later today'));
+        card.appendChild(el('span', 'small muted', SLOTS[k].med ? 'BP, weight, medicine' : 'BP and weight only'));
+      }
+      box.appendChild(card);
+    });
+  }
+
+  function svg(tag, attrs, text) {
+    var e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  var WEIGHT_EMPTY = 'Her weight trend shows here once a weight is logged. A gain of 5 lb or more within 7 days raises a call-the-doctor alert.';
+  function renderWeight() {
+    var lw = latestWeight(), box = $('weight-body'); box.textContent = '';
+    if (!lw) { box.appendChild(el('p', 'muted', WEIGHT_EMPTY)); return; }
+    box.className = 'stack';
+    var g = gainAt(lw.ts, lw.weight, lw.id);
+    var stat = el('div', 'wstat');
+    var a = el('div'); a.appendChild(el('span', 'big', lb(lw.weight) + ' lb')); a.appendChild(el('div', 'small muted', 'Latest, ' + fmtShort(lw.ts) + ' ' + fmtTime(lw.ts))); stat.appendChild(a);
+    var c = el('div');
+    if (g) {
+      c.appendChild(el('span', 'chip ' + g.level, (g.gain >= 0 ? '+' : '−') + lb(Math.abs(g.gain)) + ' lb vs. week low'));
+      c.appendChild(el('div', 'small muted', 'Lowest in the 7 days before: ' + lb(g.base.weight) + ' lb'));
+    } else {
+      c.appendChild(el('div', 'small muted', 'No earlier weight in the past 7 days to compare with yet.'));
+    }
+    stat.appendChild(c); box.appendChild(stat);
+    if (Date.now() - lw.ts > 2 * DAY) box.appendChild(el('p', 'verdict warn', 'No weight logged since ' + fmtShort(lw.ts) + '. Weigh her at the next check.'));
+
+    var pts = readings.filter(function (r) { return typeof r.weight === 'number' && r.ts >= lw.ts - 14 * DAY; }).slice().reverse();
+    if (pts.length < 2) return;
+    var W = 640, H = 200, L = 62, R = 18, T = 24, B = 32;
+    var limit = g ? g.base.weight + GAIN_ALERT : null;
+    var ws = pts.map(function (p) { return p.weight; });
+    var lo = Math.floor(Math.min.apply(null, ws) - 1), hi = Math.ceil(Math.max.apply(null, ws.concat(limit === null ? [] : [limit])) + 1);
+    var t0 = pts[0].ts, t1 = pts[pts.length - 1].ts;
+    var x = function (t) { return t1 === t0 ? L : L + (t - t0) / (t1 - t0) * (W - L - R); };
+    var y = function (w) { return T + (hi - w) / (hi - lo) * (H - T - B); };
+    var s = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'chart', role: 'img', 'aria-label': 'Weight over the last two weeks' });
+    [lo, (lo + hi) / 2, hi].forEach(function (v) {
+      s.appendChild(svg('line', { class: 'grid', x1: L, x2: W - R, y1: y(v), y2: y(v) }));
+      s.appendChild(svg('text', { x: L - 8, y: y(v) + 4, 'text-anchor': 'end' }, lb(v)));
+    });
+    if (limit !== null) {
+      s.appendChild(svg('line', { class: 'limit', x1: L, x2: W - R, y1: y(limit), y2: y(limit) }));
+      s.appendChild(svg('text', { class: 'lim', x: L + 4, y: y(limit) - 6 }, 'Call doctor at ' + lb(limit) + ' lb'));
+    }
+    s.appendChild(svg('polyline', { class: 'line', points: pts.map(function (p) { return x(p.ts).toFixed(1) + ',' + y(p.weight).toFixed(1); }).join(' ') }));
+    pts.forEach(function (p, i) {
+      var last = i === pts.length - 1;
+      s.appendChild(svg('circle', { class: 'dot' + (last ? ' last' : ''), cx: x(p.ts), cy: y(p.weight), r: last ? 7 : 3.5 }));
+    });
+    s.appendChild(svg('text', { x: L, y: H - 6 }, fmtShort(t0)));
+    s.appendChild(svg('text', { x: W - R, y: H - 6, 'text-anchor': 'end' }, fmtShort(t1)));
+    box.appendChild(s);
+  }
+
+  var HISTORY_EMPTY = 'Every check you save is listed here by day, with the time, BP, weight and whether the dose was given or skipped.';
+  function renderHistory() {
+    var box = $('history'); box.textContent = '';
+    if (!readings.length) { box.appendChild(el('p', 'muted', HISTORY_EMPTY)); return; }
+    var lastKey = null, day = null;
+    readings.forEach(function (r) {
+      var k = dayKey(r.ts);
+      if (k !== lastKey) { day = el('div', 'day'); day.appendChild(el('h3', null, fmtDay(r.ts))); box.appendChild(day); lastKey = k; }
+      var row = el('div', 'entry');
+      var tm = el('div'); tm.appendChild(el('div', 'num', fmtTime(r.ts))); tm.appendChild(el('div', 'small muted', SLOTS[r.slot] ? SLOTS[r.slot].label : ''));
+      row.appendChild(tm);
+      var bp = el('div', 'bp', r.sys + '/' + r.dia); row.appendChild(bp);
+      var meta = el('div', 'meta');
+      meta.appendChild(el('span', 'num', typeof r.weight === 'number' ? lb(r.weight) + ' lb' : 'no weight'));
+      if (r.pulse) meta.appendChild(el('span', 'num muted', 'pulse ' + r.pulse));
+      meta.appendChild(medChip(r));
+      if (r.med === 'pending') {
+        var mb = el('button', 'quiet', 'Mark given'); mb.type = 'button';
+        mb.onclick = function () { markGiven(r.id, mb); }; meta.appendChild(mb);
+      }
+      row.appendChild(meta);
+      var del = el('button', 'quiet del' + (pendingDelete === r.id ? ' danger' : ''), pendingDelete === r.id ? 'Tap again to delete' : 'Delete'); del.type = 'button';
+      del.onclick = function () {
+        if (pendingDelete !== r.id) { pendingDelete = r.id; renderHistory(); return; }
+        del.disabled = true; pendingDelete = null;
+        db.collection('readings').doc(r.id).delete().catch(function () { del.disabled = false; del.textContent = 'Could not delete'; });
+      };
+      row.appendChild(del);
+      if (r.note) row.appendChild(el('div', 'note', r.note));
+      day.appendChild(row);
+    });
+  }
+
+  function render() {
+    $('today-date').textContent = fmtDay(Date.now());
+    renderAlert(); renderNext(); renderToday(); renderWeight(); renderHistory();
+  }
+
+  function markGiven(id, btn) {
+    if (!db) return;
+    btn.disabled = true;
+    db.collection('readings').doc(id).update({ med: 'taken', medAt: Date.now() }).catch(function () { btn.disabled = false; btn.textContent = 'Could not save, try again'; });
+  }
+
+  /* ---------- form ---------- */
+  function setSlot(s) {
+    slot = s;
+    Object.keys(SLOTS).forEach(function (k) { $('seg-' + k).setAttribute('aria-pressed', k === s ? 'true' : 'false'); });
+    liveVerdict();
+  }
+  function whenTs() { return whenTouched && $('when').value ? new Date($('when').value).getTime() : Date.now(); }
+  function liveVerdict() {
+    var sys = parseInt($('sys').value, 10);
+    if (!(sys >= 50 && sys <= 260)) { setVerdict($('live'), { cls: 'plain', text: SLOTS[slot].med ? 'Enter the top number to see whether to give the dose.' : 'Afternoon check: monitoring only, no medicine.' }); }
+    else {
+      var v = doseVerdict(slot, sys);
+      if (sys < 90) v.extra = 'This is quite low. If she feels dizzy, faint or confused, call the doctor.';
+      setVerdict($('live'), v);
+    }
+    var w = parseFloat($('weight').value), lw = $('live-weight');
+    var g = w >= 50 && w <= 700 ? gainAt(whenTs(), w) : null;
+    if (g && g.level !== 'ok') {
+      lw.hidden = false;
+      setVerdict(lw, g.level === 'bad'
+        ? { cls: 'bad', text: 'Up ' + lb(g.gain) + ' lb in a week. Call the doctor.', sub: 'Lowest in the past 7 days was ' + lb(g.base.weight) + ' lb. Double-check the scale reading, then save.' }
+        : { cls: 'warn', text: 'Up ' + lb(g.gain) + ' lb from the week’s low of ' + lb(g.base.weight) + ' lb.', sub: 'Not at the 5 lb alert yet. Keep weighing at each check.' });
+    } else lw.hidden = true;
+  }
+  function fail(msg, focus) { var e = $('form-error'); e.hidden = false; e.textContent = msg; if (focus) $(focus).focus(); }
+
+  Object.keys(SLOTS).forEach(function (k) { $('seg-' + k).onclick = function () { slotTouched = true; setSlot(k); }; });
+  ['sys', 'weight'].forEach(function (id) { $(id).addEventListener('input', liveVerdict); });
+  $('when').addEventListener('input', function () {
+    whenTouched = true;
+    if (!slotTouched && $('when').value) setSlot(slotFor(new Date($('when').value)));
+    liveVerdict();
+  });
+
+  $('form').addEventListener('submit', function (ev) {
+    ev.preventDefault(); $('form-error').hidden = true;
+    var sys = parseInt($('sys').value, 10), dia = parseInt($('dia').value, 10);
+    var wRaw = $('weight').value.trim(), w = wRaw === '' ? null : parseFloat(wRaw);
+    var pRaw = $('pulse').value.trim(), pulse = pRaw === '' ? null : parseInt(pRaw, 10);
+    var ts = whenTs();
+    if (!(sys >= 50 && sys <= 260)) return fail('Enter the top BP number (50 to 260).', 'sys');
+    if (!(dia >= 30 && dia <= 160)) return fail('Enter the bottom BP number (30 to 160).', 'dia');
+    if (dia >= sys) return fail('The bottom number should be lower than the top number. Check both.', 'dia');
+    if (w !== null && !(w >= 50 && w <= 700)) return fail('Weight should be between 50 and 700 lb, or leave it blank.', 'weight');
+    if (pulse !== null && !(pulse >= 20 && pulse <= 250)) return fail('Pulse should be between 20 and 250, or leave it blank.', 'pulse');
+    if (!(ts > 0) || ts > Date.now() + 5 * 60000) return fail('The measured time can’t be in the future.', 'when');
+    if (!db) return fail('The log isn’t connected, so this can’t be saved. Check the internet connection and reload the page.');
+    var doc = { ts: ts, slot: slot, sys: sys, dia: dia, weight: w, pulse: pulse, note: $('note').value.trim(),
+      med: SLOTS[slot].med ? (sys < SYS_SKIP ? 'skipped' : 'pending') : 'none' };
+    var btn = $('save'); btn.disabled = true; btn.textContent = 'Saving…';
+    /* Without a connection Firestore queues the write and never answers, so stop waiting after 12 s. */
+    var write = db.collection('readings').add(doc);
+    var slow = new Promise(function (res, rej) { setTimeout(function () { rej({ code: 'slow' }); }, 12000); });
+    Promise.race([write, slow]).then(function () {
+      ['sys', 'dia', 'weight', 'pulse', 'note'].forEach(function (id) { $(id).value = ''; });
+      whenTouched = false; slotTouched = false; $('when').value = localInput(new Date()); setSlot(slotFor(new Date()));
+      var v = doseVerdict(doc.slot, sys); v.text = 'Saved. ' + v.text;
+      if (w === null) v.extra = 'No weight was logged with this check. Weigh her when you can.';
+      setVerdict($('live'), v);
+      $('next').scrollIntoView();
+    }, function (e) {
+      fail(e && e.code === 'permission-denied'
+        ? 'This family link isn’t accepted, so the check wasn’t saved. Ask for the link again and open that one.'
+        : e && e.code === 'slow'
+        ? 'No connection right now. The check is kept on this device and will save by itself once the page is back online. Don’t close the page, and don’t save it a second time.'
+        : 'Could not save. Check the connection and press Save again.');
+    }).then(function () { btn.disabled = false; btn.textContent = 'Save check'; });
+  });
+
+  $('doc-form').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    if (!db) { $('doc-saved').textContent = 'Not connected, so this was not saved.'; return; }
+    db.collection('settings').doc('contact').set({ name: $('doc-name').value.trim(), phone: $('doc-phone').value.trim() })
+      .then(function () { $('doc-saved').textContent = 'Saved'; }, function () { $('doc-saved').textContent = 'Could not save'; });
+  });
+
+  /* ---------- boot ---------- */
+  $('today-date').textContent = fmtDay(Date.now());
+
+  function offline(msg) {
+    $('status').hidden = false; $('status').textContent = msg;
+    if (!loaded) { $('next-title').textContent = 'The log isn’t loaded'; $('next-sub').textContent = msg; }
+  }
+
+  function start(key) {
+    try { localStorage.setItem(STORE, key); } catch (e) {}
+    if (location.hash !== '#' + key) { try { history.replaceState(null, '', '#' + key); } catch (e) { location.hash = key; } }
+    $('setup').hidden = true; $('app').hidden = false;
+    var link = location.href.split('#')[0] + '#' + key;
+    $('family-link').textContent = link;
+    $('copy-link').onclick = function () { copyText(link, $('copy-done'), 'Copied'); };
+    if (typeof qrcode === 'function') {
+      try {
+        var q = qrcode(0, 'M'); q.addData(link); q.make();
+        $('qr').innerHTML = q.createSvgTag({ cellSize: 6, margin: 12, scalable: true });
+        $('qr-card').hidden = false; $('print-qr').hidden = false;
+        $('print-qr').onclick = function () { window.print(); };
+        if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || location.protocol === 'file:') {
+          $('qr-warn').hidden = false;
+          $('qr-warn').textContent = 'This page is open from this computer only, so this QR code won’t work on a phone. Print it from the page’s public web address instead.';
+        }
+      } catch (e) {}
+    }
+
+    $('when').value = localInput(new Date());
+    setSlot(slot); render();
+    setInterval(function () {
+      if (!whenTouched) $('when').value = localInput(new Date());
+      if (!slotTouched && !$('sys').value) setSlot(slotFor(new Date()));
+      renderNext(); renderToday(); $('today-date').textContent = fmtDay(Date.now());
+    }, 60000);
+
+    if (typeof firebase === 'undefined') return offline('Can’t reach the saved log. Check the internet connection and reload the page.');
+    try { firebase.initializeApp(firebaseConfig); db = firebase.firestore().collection('logs').doc(key); }
+    catch (e) { db = null; return offline('Can’t reach the saved log. Reload the page to try again.'); }
+
+    var timer = setTimeout(function () { offline('Still trying to reach the saved log. What you see may be out of date.'); }, 10000);
+    db.collection('readings').orderBy('ts', 'desc').limit(500).onSnapshot({ includeMetadataChanges: true }, function (snap) {
+      readings = snap.docs.map(function (s) { var o = Object.assign({}, s.data()); o.id = s.id; return o; })
+        .filter(function (r) { return typeof r.ts === 'number' && typeof r.sys === 'number'; });
+      if (!snap.metadata.fromCache) { loaded = true; clearTimeout(timer); $('status').hidden = true; }
+      else if (readings.length) loaded = true;
+      render(); liveVerdict();
+    }, function (e) {
+      clearTimeout(timer);
+      offline(e && e.code === 'permission-denied'
+        ? 'This family link isn’t accepted. Ask for the link again and open that one.'
+        : 'Lost the connection to the saved log. Reload the page to reconnect.');
+    });
+    db.collection('settings').doc('contact').onSnapshot(function (s) {
+      contact = s.exists ? s.data() : {};
+      if (document.activeElement !== $('doc-name') && document.activeElement !== $('doc-phone')) {
+        $('doc-name').value = contact.name || ''; $('doc-phone').value = contact.phone || '';
+      }
+      renderAlert();
+    }, function () {});
+  }
+
+  var found = findKey();
+  if (found.key) start(found.key);
+  else {
+    $('setup').hidden = false;
+    if (found.broken) $('setup-msg').textContent = 'This link looks incomplete, so the log can’t be opened. Ask for the family link again and open it exactly as sent.';
+    $('setup-new').onclick = function () { start(newKey()); };
+  }
+})();
+</script>
+</body>
+</html>
